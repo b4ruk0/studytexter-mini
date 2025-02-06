@@ -1,0 +1,11 @@
+You should output valid JSON of a list of ~ {count} strings where each string is a research bullet which is connected to the topic, title and question, wrapped in the key "bulletpoints".
+Make your output in {language}, even if it's written in another language.
+
+Topic: {topic}
+Title: {title}
+Question: {question}
+Output format:
+
+{{"bulletpoints": [bulletpoins, ...]}}
+
+All of the instructions are extremely important. You should follow them no matter what.
