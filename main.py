@@ -1,35 +1,85 @@
-from dotenv import load_dotenv
-from openai import OpenAI
-from bs4 import BeautifulSoup
+from google.genai import types
+from dotenv       import load_dotenv
+from openai       import OpenAI
+from bs4          import BeautifulSoup
+from google       import genai
+import httpx
 import requests
 import json
 import os
 import random
+import http.client
 
 load_dotenv()
 SERPER_API_KEY = os.getenv("SERPER_API_KEY")
-GOOGLE_URL = "https://google.serper.dev/search"
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+GOOGLE_SEARCH_URL = "https://google.serper.dev/search"
+client_openai = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+client_genai = genai.Client(api_key=os.getenv("GOOGLE_GEMINI_API_KEY"))
 
-
-def google_search_links(question):
+def google_scholar_search(question):
+    conn = http.client.HTTPSConnection("google.serper.dev")
+    payload = json.dumps({
+        "q": question,
+        "hl": "de",
+    })
     headers = {
-        "X-API-KEY": SERPER_API_KEY,
-        "Content-Type": "application/json",
+        'X-API-KEY': SERPER_API_KEY,
+        'Content-Type': 'application/json'
     }
-    payload = {
-        "q": f"\"wikipedia\"{question}",
-        "num": 10,
+    conn.request("POST", "/scholar", payload, headers)
+    res = conn.getresponse()
+    data = res.read()
+    data.decode("utf-8")
+    results = json.loads(data.decode("utf-8"))
+    pdf_links = []
+    for item in results.get("organic", []):
+        link = item.get("link")
+        if link and link.endswith(".pdf"):
+            pdf_links.append(link)
+    return pdf_links
+
+
+def google_search(question):
+    conn = http.client.HTTPSConnection("google.serper.dev")
+    payload = json.dumps({
+        "q": question,
+        "hl": "de"
+    })
+    headers = {
+        'X-API-KEY': SERPER_API_KEY,
+        'Content-Type': 'application/json'
     }
-    response = requests.post(
-        GOOGLE_URL,
-        json=payload,
-        headers=headers,
-    )
-    if response.status_code == 200:
-        return response.json()
+    conn.request("POST", "/search", payload, headers)
+    res = conn.getresponse()
+    data = res.read()
+    data.decode("utf-8")
+    results = json.loads(data.decode("utf-8"))
+    pdf_links = []
+    for item in results.get("organic", []):
+        link = item.get("link")
+        if link and link.endswith(".pdf"):
+            pdf_links.append(link)
+    return pdf_links
+
+
+def extract_pdf_pages(path):
+    doc_data = httpx.get(path).content
+    prompt = "Summarize this document"
+    try:
+        response = client_genai.models.generate_content(
+            model="gemini-1.5-flash",
+            contents=[
+                types.Part.from_bytes(
+                    data=doc_data,
+                    mime_type='application/pdf',
+                ),
+                prompt
+            ]
+        )
+    except:
+        return ""
     else:
-        raise f"Error: {response.status_code}, {response.text}"
+        return response.text
 
 
 def extract_links(google_search):
@@ -48,7 +98,7 @@ def link_to_data(link):
 def call_gpt(messages, model="gpt-4o-mini", use_json=False):
     try:
         response_format = {"type": "json_object"} if use_json else None
-        response = client.chat.completions.create(
+        response = client_openai.chat.completions.create(
             model=model,
             messages=messages,
             response_format=response_format,
@@ -105,9 +155,12 @@ def expand_bullet_point(bulletpoint):
     if not bulletpoint:
         return "# ERROR"
     expand_prompt = load_text_file(r"prompts\prompt_extend_w_data.txt")
-    websites = google_search_links(bulletpoint)
-    links = extract_links(websites)[1]
-    materials = link_to_data(links)
+    links = []
+    links.extend(google_search(bulletpoint))
+    links.extend(google_scholar_search(bulletpoint))
+    materials = []
+    for link in links:
+        materials.extend(extract_pdf_pages(link))
     formatted_prompt = expand_prompt.format(bulletpoint=bulletpoint, materials=materials)
     messages = []
     messages.append({"role": "user", "content": formatted_prompt})
@@ -146,8 +199,8 @@ def write_full_paper(user_input):
         paper_details["title"],
         paper_details["question"],
     )
-    amount = random.randint(4, 6)
 
+    amount = random.randint(4, 6)
     bulletpoints = gen_bullet_points(topic, title, question, amount)
 
     if not bulletpoints:
@@ -167,7 +220,6 @@ def write_full_paper(user_input):
     output_lines.append(f"## {conclusion_text}\n")
 
     return "\n".join(output_lines)
-
 
 
 user_input = 'Hallo, ich möchte eine Hausarbeit über das Thema Influencer Marketing schreiben.'
