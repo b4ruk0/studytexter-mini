@@ -5,8 +5,9 @@ You will be given materials that you can and should use only. You should add one
 Topic: {bulletpoint}
 
 Output instructions:
-- Make the title in default text format.
-- It should be 2-3 paragraphs.
+- Make the title.
+- All the output should be only written in default text format (only bold and italic are acceptable).
+- It should be 4-5 paragraphs.
 - It must logically open and close the following topic.
 - Write everything in german.
 

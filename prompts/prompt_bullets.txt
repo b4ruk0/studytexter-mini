@@ -1,9 +1,10 @@
-You should output valid JSON of a list of ~ {count} strings where each string is a research bullet which is connected to the topic, title and question, wrapped in the key "bulletpoints".
-Make your output in {language}, even if it's written in another language.
+You should create chapter names for ny research paper You should output valid JSON of a list of ~ {count} strings where each string is a research bullet which is connected to the topic, title and question, wrapped in the key "bulletpoints".
+Make your output in {language}, even if it's written in another language. Make sure there's no quotation marks in the bulletpoints (this is very important).
 
 Topic: {topic}
 Title: {title}
 Question: {question}
+
 Output format:
 
 {{"bulletpoints": [bulletpoins, ...]}}

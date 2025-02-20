@@ -7,7 +7,8 @@ Chapters:
 {bulletpoints} 
 
 Output instructions:
-- Make the title in default text format.
+- Make a small title for he introduction.
+- All the output should be only written in default text format (only bold and italic are acceptable).
 - It should be 2-3 paragraphs.
 - Write everything in german.
 
